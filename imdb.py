@@ -71,6 +71,10 @@ if __name__ == '__main__':
 
         parser.add_argument('--title', dest='title', default=None, required=True,
             help='Movie/show title')
+        parser.add_argument('--year', dest='year', default=None,
+            help='Release year')
+        parser.add_argument('--id', dest='id', default=None,
+            help='IMDB ID')
 
         args = parser.parse_args()
 
