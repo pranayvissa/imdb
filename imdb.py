@@ -1,49 +1,94 @@
 #!/usr/bin/python
 
-import omdb
-import requests
+import os
+import sys
+import inspect
+import imp
+import fnmatch
 import argparse
 
-API_KEY = '57f4b0ed'
-omdb.set_default('apikey', API_KEY)
+scriptDir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(scriptDir+"/inc")
 
-parser = argparse.ArgumentParser(description='IMDB loookup', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--title',dest='title')
-parser.add_argument('--season',dest='season')
-parser.add_argument('--year',dest='year')
-args = parser.parse_args()
+from Log import (printExeptionDetails, logger, logging)
+from BaseModule import BaseModule
 
-client = omdb.OMDBClient(apikey=API_KEY)
+plugins = None
 
-movie = args.title
-year = args.year
+# Return a list of all plugins
+def load_plugins():
 
-info = omdb.get(title=movie,year=year)
+    pluginDir = scriptDir + "/plugins/"
+    plugins = {}
 
-score = info['metascore']
-imdb_votes = info['imdb_votes']
-imdb_rating = info['imdb_rating']
-cast = info['actors']
-runtime = info['runtime']
-imdb_id = info['imdb_id']
-num_seasons = int(info['total_seasons'])
+    # Load plugins
+    for root, _, filenames in os.walk(pluginDir):
+        for filename in fnmatch.filter(filenames, '*.py'):
+            fname = os.path.join(root, filename)
+            p = imp.load_source('Plugin' , fname)
+            classes = inspect.getmembers(p, inspect.isclass)
+            for cname, cls in classes:
+                if BaseModule in cls.__bases__:
+                    plugins[cname] = cls()
 
-
-# Print Movie Info
-print "Movie: %s" % movie
-print "    Metascore: %s" % score
-print "    Votes: %s" % imdb_votes
-print "    Rating: %s" % imdb_rating
-print "    Cast: %s" % cast
-print "    Runtime %s" % runtime
+    return plugins
 
 
-# https://www.imdb.com/title/tt0106004/episodes?season=3&ref_=tt_eps_sn_3
-# http://www.omdbapi.com/?apikey=57f4b0ed&t=Frasier&y=1993&season=3
-url = 'http://www.omdbapi.com/?apikey=%s&' % (API_KEY)
+# Our main function
+def main(args):
+    global plugins
+    rc = 0
+    try:
+        # Execute the action function of all plugins
+        for cname, plugin in plugins.iteritems():
+            rc = plugin.action(args)
+            if rc != 0:
+                break
+    except:
+        printExeptionDetails()
+        os._exit(1)
+    pass
 
-for season in range(1, (num_seasons+1)):
-    seasonUrl = url + 't=%s&y=%s&season=%s' % (movie, year, season)
-    rsp = requests.get(url=seasonUrl)
+    return rc
 
+
+if __name__ == '__main__':
+
+    global plugins
+    rc = 0
+
+    try:
+        plugins = load_plugins()
+
+        # Create a parser Object
+        parser = argparse.ArgumentParser(
+            description="Innovium - Automated Switch Management (iSwitch)",
+                formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+        # Load plugins, as they provide extensible args
+        for cname, plugin in plugins.iteritems():
+            plugin.add_args(parser)
+
+        parser.add_argument('--title', dest='title', default=None, required=True,
+            help='Movie/show title')
+
+        args = parser.parse_args()
+
+        # Set logging level
+        logger.setLevel(logging.INFO)
+        if args.quiet:
+            logger.setLevel(logging.ERROR)
+        if args.verbose:
+            logger.setLevel(logging.DEBUG)
+
+        rc = main(args)
+
+    except SystemError:
+        pass
+
+    except:
+        printExeptionDetails()
+        os._exit(1)
+
+    os._exit(rc)
 
