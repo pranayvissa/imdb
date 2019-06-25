@@ -1,8 +1,16 @@
 #!/usr/bin/python
 
+import omdb
+
 class BaseModule:
     def __init__(self):
-        pass
+        # Set up basic omdb library
+        self.api_key = '57f4b0ed'
+        omdb.set_default('apikey', self.api_key)
+
+        self.omdbc = omdb.OMDBClient(apikey=self.api_key)
+
+        self.main_url = 'http://www.omdbapi.com/?apikey=%s&' % (self.api_key)
 
     def add_args(self, parser):
         raise NotImplementedError("Subclass to implement add_args()")

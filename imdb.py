@@ -17,6 +17,7 @@ plugins = None
 
 # Return a list of all plugins
 def load_plugins():
+    global plugins
 
     pluginDir = scriptDir + "/plugins/"
     plugins = {}
@@ -75,6 +76,10 @@ if __name__ == '__main__':
             help='Release year')
         parser.add_argument('--id', dest='id', default=None,
             help='IMDB ID')
+        parser.add_argument('--quiet', dest='quiet', default=None,
+            help='Quiet mode')
+        parser.add_argument('--verbose', dest='verbose', default=None,
+            help='Verbose mode')
 
         args = parser.parse_args()
 
