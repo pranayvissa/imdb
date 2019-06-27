@@ -16,13 +16,14 @@ class Shows(BaseModule):
         self.year = ''
         self.season_rating = {}
         self.ratings = {}
-        self.num_best = 10   # Pick 10 best by default
 
 
     def add_args(self, parser):
         parser.add_argument('--season', dest='season', default=None,
                             help='Season No.')
-        parser.add_argument('--num_best', dest='num_best', default=None,
+        parser.add_argument('--episode', dest='episode', default=None,
+                            help='Episode No.')
+        parser.add_argument('--top', dest='top', default=None,
                             help='Season No.')
 
 
@@ -30,10 +31,10 @@ class Shows(BaseModule):
         rc = 0
         self.title = args.title
 
-        if args.num_best is None:
-            num_best = 10
+        if args.top is None:
+            top = 10
         else:
-            num_best = int(args.num_best)
+            top = int(args.top)
 
         if args.season is None:
             url = self.main_url+"t=%s" % (self.title)
@@ -47,7 +48,7 @@ class Shows(BaseModule):
 
         self.get_episode_rating()
 
-        top_rated = self.get_top_rated_episodes(num_best)
+        top_rated = self.get_top_rated_episodes(top)
         self.print_shows(top_rated)
 
         return rc
@@ -136,13 +137,5 @@ class Shows(BaseModule):
             season = show[2]
             rating = show[3]
             INFO("    %s, %s, %s, %s" % (season, episode, name, rating))
-
-
-
-
-
-
-
-
 
 
