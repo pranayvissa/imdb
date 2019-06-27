@@ -8,7 +8,7 @@ class BaseModule:
         self.api_key = '57f4b0ed'
         omdb.set_default('apikey', self.api_key)
 
-        self.omdbc = omdb.OMDBClient(apikey=self.api_key)
+        self.omdb_client = omdb.OMDBClient(apikey=self.api_key)
 
         self.main_url = 'http://www.omdbapi.com/?apikey=%s&' % (self.api_key)
 
