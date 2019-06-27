@@ -12,8 +12,10 @@ class BaseModule:
 
         self.main_url = 'http://www.omdbapi.com/?apikey=%s&' % (self.api_key)
 
+
     def add_args(self, parser):
         raise NotImplementedError("Subclass to implement add_args()")
+
 
     def action(self, args):
         raise NotImplementedError("Subclass to implement action()")

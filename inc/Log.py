@@ -19,6 +19,7 @@ class MyFormatter(logging.Formatter):
             stamp = "%s.%03d" % (tm, record.msecs)
         return stamp
 
+
 # Create the logget
 logger = logging.getLogger('imdb')
 
@@ -37,10 +38,12 @@ DEBUG = logger.debug
 CRIT  = logger.critical
 WARN  = logger.warning
 
+
 # Print the details of the last exception
 def printExeptionDetails():
     type, value, tb = sys.exc_info()
     WARN("Exception: Type: " + str(type) + ", Traceback : " + traceback.format_exc())
+
 
 def addFileHandler(filename):
     if filename is None:
