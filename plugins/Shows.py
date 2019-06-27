@@ -19,6 +19,10 @@ class Shows(BaseModule):
 
 
     def add_args(self, parser):
+        '''
+        Argument parser for this plugin
+        '''
+
         parser.add_argument('--season', dest='season', default=None,
                             help='Season No.')
         parser.add_argument('--episode', dest='episode', default=None,
@@ -28,6 +32,10 @@ class Shows(BaseModule):
 
 
     def action(self, args):
+        '''
+        Actions taken by this plugin
+        '''
+
         rc = 0
         self.title = args.title
 
@@ -55,6 +63,10 @@ class Shows(BaseModule):
 
 
     def get_info_for_all_seasons(self):
+        '''
+        Get IMDB info for all seasons and store it
+        '''
+
         self.info['Seasons'] = {}
         num_seasons = int(self.info['totalSeasons'])
         for num_season in range(1, (num_seasons+1)):
@@ -64,6 +76,10 @@ class Shows(BaseModule):
 
 
     def get_season_info(self, season):
+        '''
+        Get info for this season (and episode if given)
+        '''
+
         self.info['Seasons'] = {}
         self.info['Seasons'][season] = {}
         url = self.main_url+"t=%s&season=%s" % (self.title, season)
@@ -72,6 +88,11 @@ class Shows(BaseModule):
 
 
     def get_episode_rating(self):
+        '''
+        Collect all episode ratings. Store in dict indexed by rating.
+        May episodes can have same rating to structure to be dictionary of lists
+        '''
+
         seasons = self.info['Seasons']
         for num_season in seasons:
             season = seasons[num_season]
@@ -94,6 +115,10 @@ class Shows(BaseModule):
 
 
     def get_top_rated_episodes(self, num):
+        '''
+        Get "num" top rated episodes for the show
+        '''
+
         ratings = self.ratings.keys()
         if len(ratings) == 0:
             CRIT("No ratings defined")
@@ -124,6 +149,9 @@ class Shows(BaseModule):
 
 
     def print_shows(self, shows):
+        '''
+        Print top rated shows based on data collected from get_top_rated_episodes()
+        '''
         num_shows = len(shows)
         if num_shows == 0:
             CRIT("No shows defined")
