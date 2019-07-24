@@ -76,3 +76,19 @@ class DB():
             return int(data['id'])      # returned as tuple
         except MySQLdb.IntegrityError:
             return -1
+
+
+    def check_row_exist(self, table, condition):
+
+        query = "SELECT `id` from `%s` WHERE %s" % (table, condition)
+        cursor = self._db.cursor(MySQLdb.cursors.DictCursor)
+        try:
+            cursor.execute(query)
+            data = cursor.fetchone()
+            if 'id' in data:
+                return True
+            else:
+                return False
+        except MySQLdb.IntegrityError:
+            return False
+
