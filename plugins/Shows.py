@@ -3,7 +3,6 @@
 import requests
 
 from BaseModule import BaseModule
-from Log import (INFO)
 
 
 class Shows(BaseModule):
@@ -150,10 +149,15 @@ class Shows(BaseModule):
                     self.db.insert_row('Shows', record)
 
 
+    def check_title_if_watched(self, title, season, episode):
+        ''' Check if show has been seen before '''
+
+        condition = "`show_title` LIKE \"%s\" AND `season`=%d AND `episode`=%d" % (title, season, episode)
+        return self.db.check_row_exists("ShowsWatched", condition)
+
+
     def get_top_rated_shows(self, top):
         ''' Get top rated shows based off imdb ratings '''
-
-        INFO("xxx")
 
         for season in self.info['Seasons']:
             episodes = self.info['Seasons'][season]['Episodes']
@@ -163,6 +167,9 @@ class Shows(BaseModule):
                 season = str(season)
                 ep = episode['Episode']
                 show_info = (title, season, ep)
+
+                if self.check_title_if_watched:
+                    continue
 
                 if rating in self.top_rated_shows:
                     self.top_rated_shows[rating].append(show_info)
