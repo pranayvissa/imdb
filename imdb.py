@@ -76,6 +76,10 @@ if __name__ == '__main__':
             help='Release year')
         parser.add_argument('--id', dest='id', default=None,
             help='IMDB ID')
+        parser.add_argument('--insert_watched', dest='insert_watched', default=None,
+            action='store_true', help='Insert watched data into DB')
+        parser.add_argument('--ignore_watched', dest='insert_watched', default=False,
+            action='store_true', help='Ignore watched stuff from DB')
         parser.add_argument('--quiet', dest='quiet', default=None,
             help='Quiet mode')
         parser.add_argument('--verbose', dest='verbose', default=None,

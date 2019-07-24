@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import omdb
+from DB import DB
 
 class BaseModule:
     def __init__(self):
@@ -12,6 +13,7 @@ class BaseModule:
 
         self.main_url = 'http://www.omdbapi.com/?apikey=%s&' % (self.api_key)
 
+        self.db = DB()
 
     def add_args(self, parser):
         raise NotImplementedError("Subclass to implement add_args()")

@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
 import requests
-import os
+
 from BaseModule import BaseModule
-from Log import (CRIT, INFO)
+from Log import (INFO)
 
 
 class Shows(BaseModule):
@@ -17,18 +17,22 @@ class Shows(BaseModule):
         self.season_rating = {}
         self.ratings = {}
 
+        self.user = 'Pranay Vissa'
+
+        self.top_rated_shows = {}
+
 
     def add_args(self, parser):
         '''
         Argument parser for this plugin
         '''
 
-        parser.add_argument('--season', dest='season', default=None,
+        parser.add_argument('--season', dest='season', default=None, type=int,
                             help='Season No.')
-        parser.add_argument('--episode', dest='episode', default=None,
+        parser.add_argument('--episode', dest='episode', default=None, type=int,
                             help='Episode No.')
-        parser.add_argument('--top', dest='top', default=None,
-                            help='Season No.')
+        parser.add_argument('--top', dest='top', default=1,
+                            help='Best episode')
 
 
     def action(self, args):
@@ -39,11 +43,7 @@ class Shows(BaseModule):
         rc = 0
         self.title = args.title
 
-        if args.top is None:
-            top = 10
-        else:
-            top = int(args.top)
-
+        # Get show info
         if args.season is None:
             url = self.main_url+"t=%s" % (self.title)
             rsp = requests.get(url)
@@ -52,12 +52,31 @@ class Shows(BaseModule):
             self.year = self.info['Year']
             self.get_info_for_all_seasons()
         else:
-            self.get_season_info(self, args.season)
+            self.get_season_info(args.season, args.episode)
 
-        self.get_episode_rating()
+        if args.insert_watched:
+            season = int(args.season)
+            ep_indx = int(args.episode)-1
+            info = self.info['Seasons'][season]['Episodes'][ep_indx]
 
-        top_rated = self.get_top_rated_episodes(top)
-        self.print_shows(top_rated)
+            episode = int(info['Episode'])
+
+            # Get show id
+            condition = "`show_title` LIKE \"%s\" AND `season`=%d AND `episode`=%d" % (self.title, season, episode)
+            show_id = self.db.get_id("Shows", condition)
+            record = {}
+            record['fk_show_id'] = str(show_id)
+            record['show_title'] = self.title
+            record['season'] = str(season)
+            record['episode'] = str(episode)
+            record['imdb_id'] = info['imdbID']
+
+            self.db.insert_row('ShowsWatched', record)
+
+            return rc
+
+        # Get top rated show(s)
+        #self.get_top_rated_shows(args.top)
 
         return rc
 
@@ -74,8 +93,22 @@ class Shows(BaseModule):
             rsp = requests.get(url)
             self.info['Seasons'][num_season] = rsp.json()
 
+            # Insert stat into DB
+            episodes = self.info['Seasons'][num_season]['Episodes']
+            for episode in episodes:
+                record = {}
+                record['show_title'] = self.info['Title']
+                record['season'] = str(num_season)
+                record['episode'] = episode['Episode']
+                record['episode_title'] = episode['Title']
+                record['rating'] = episode['imdbRating']
+                record['imdb_id'] = episode['imdbID']
+                record['release_date'] = episode['Released']
 
-    def get_season_info(self, season):
+                self.db.insert_row('Shows', record)
+
+
+    def get_season_info(self, season, ep):
         '''
         Get info for this season (and episode if given)
         '''
@@ -85,85 +118,53 @@ class Shows(BaseModule):
         url = self.main_url+"t=%s&season=%s" % (self.title, season)
         rsp = requests.get(url)
         self.info['Seasons'][season] = rsp.json()
+        episodes = self.info['Seasons'][season]['Episodes']
+        self.info['Title'] = self.title
 
 
-    def get_episode_rating(self):
-        '''
-        Collect all episode ratings. Store in dict indexed by rating.
-        May episodes can have same rating to structure to be dictionary of lists
-        '''
+        if ep is not None:
+            episodes = self.info['Seasons'][season]['Episodes']
+            for episode in episodes:
+                record = {}
+                record['show_title'] = self.info['Title']
+                record['season'] = str(season)
+                record['episode'] = episode['Episode']
+                record['episode_title'] = episode['Title']
+                record['rating'] = episode['imdbRating']
+                record['imdb_id'] = episode['imdbID']
+                record['release_date'] = episode['Released']
 
-        seasons = self.info['Seasons']
-        for num_season in seasons:
-            season = seasons[num_season]
-            all_episodes = season['Episodes']
-            num_episodes = len(all_episodes)
+                self.db.insert_row('Shows', record)
+        else:
+            for episode in episodes:
+                if int(episode['Episode']) == int(ep):
+                    record = {}
+                    record['show_title'] = self.info['Title']
+                    record['season'] = str(season)
+                    record['episode'] = episode['Episode']
+                    record['episode_title'] = episode['Title']
+                    record['rating'] = episode['imdbRating']
+                    record['imdb_id'] = episode['imdbID']
+                    record['release_date'] = episode['Released']
 
-            for num_episode in range(num_episodes):
-                episode = all_episodes[num_episode]
-                rating = float(episode['imdbRating'])
-                name = episode['Title']
+                    self.db.insert_row('Shows', record)
+
+
+    def get_top_rated_shows(self, top):
+        ''' Get top rated shows based off imdb ratings '''
+
+        INFO("xxx")
+
+        for season in self.info['Seasons']:
+            episodes = self.info['Seasons'][season]['Episodes']
+            for episode in episodes:
+                rating = episode['imdbRating']
+                title = self.info['Title']
+                season = str(season)
                 ep = episode['Episode']
+                show_info = (title, season, ep)
 
-                ep_info = (name, ep, num_season, rating)
-
-                if rating in self.ratings:
-                    self.ratings[rating].append(ep_info)
+                if rating in self.top_rated_shows:
+                    self.top_rated_shows[rating].append(show_info)
                 else:
-                    self.ratings[rating] = []
-                    self.ratings[rating].append(ep_info)
-
-
-    def get_top_rated_episodes(self, num):
-        '''
-        Get "num" top rated episodes for the show
-        '''
-
-        ratings = self.ratings.keys()
-        if len(ratings) == 0:
-            CRIT("No ratings defined")
-            os._exit(1)
-
-        ratings.sort(reverse=True)
-        cnt = 0
-        best_shows = []
-        rindx = 0
-
-        while (cnt < num):
-            shows = self.ratings[ratings[rindx]]
-            num_shows = len(shows)
-            for i in range(num_shows):
-                if cnt >= num:
-                    break
-
-                best_shows.append(shows[i])
-                cnt = cnt + 1
-
-            rindx += 1
-
-        if len(best_shows) != num:
-            CRIT("Internal Error. Shows more than requested for")
-            os._exit(1)
-
-        return best_shows
-
-
-    def print_shows(self, shows):
-        '''
-        Print top rated shows based on data collected from get_top_rated_episodes()
-        '''
-        num_shows = len(shows)
-        if num_shows == 0:
-            CRIT("No shows defined")
-            os._exit(1)
-
-        INFO("Here are the top %d shows" % num_shows)
-        INFO("    Season, Episode, Title, Rating")
-        for show in shows:
-            name = show[0]
-            episode = show[1]
-            season = show[2]
-            rating = show[3]
-            INFO("    %s, %s, %s, %s" % (season, episode, name, rating))
-
-
+                    self.top_rated_shows[rating] = [show_info]
